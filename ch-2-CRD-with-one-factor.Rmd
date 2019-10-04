@@ -1,0 +1,158 @@
+---
+title: "Ch. 2 Completely Randomized Esigns with One Factor"
+author: "Sonya Hua"
+date: "September 24, 2019"
+output: html_document
+---
+
+```{r}
+#install.packages("daewr")
+library("daewr")
+data(bread)
+str(bread)
+```
+```{r}
+
+# Data set:
+bread
+```
+
+```{r}
+# Regress on the treatment factors
+mod0 <- lm(height ~ time, data= bread)
+summary(mod0)
+```
+
+Interpretation would be if the bread was allowed to rise for 40 minutes, bread height would increase by 2.81 inches relative to the 35 minute rise time. If the bread was allowed to rise for 45 minutes, bread height wouldincrease by 2.87 inches relative to the 35 minute rise time.
+
+Without an intercept, we can see the rise teams for each treatment level:
+
+```{r}
+# Regress on the treatment factors - no intercept
+mod1 <- lm(height ~ time -1, data= bread)
+summary(mod1)
+```
+
+For rise time of 35 minutes, mean bread height is  5.4 inches (cell mean). Let's see if this intuitively makes sense by looking at the data once again:
+
+```{r}
+library("dplyr")
+bread %>% filter(time == 35)
+(4.5 + 5 + 5.5 + 6.75) / 4
+```
+
+The math checks out. 
+
+### Estimable Contrasts of Treatment Effects
+
+Estimable contrasts can be obtained from the `fit.contrast` function in gmodels R package. This only works with factorized treatment levels which `time` is:
+
+```{r}
+#install.packages("gmodels")
+library("gmodels")
+
+# Estimate the avg. difference in the cell means for the first and second levels:
+fit.contrast(mod0, "time", c(1,-1,0))
+```
+
+`fit.contrast` Computes the specified contrast(s) by re-fitting the model with the appropriate arguments. A contrast of the form c(1,0,0,-1) would compare the mean of the first group with the mean of the fourth group.
+
+Let's contrast T2 - T3
+
+```{r}
+fit.contrast(mod0, "time", c(0,1,-1))
+```
+
+There is no significant difference between Treatment 2 and Treatment 3.
+
+###2.4 Linear Models To Estimate ATE
+
+```{r}
+library(daewr)
+mod0 <- lm(height ~ time, data = bread)
+summary(mod0)
+```
+
+
+###2.4.5 ANOVA: Hypothesis Test of No Treatment Effects
+
+```{r}
+mod1 <- aov(height ~ time, data=bread)
+summary(mod1)
+```
+
+There are significant differences among the mean risen dough heights for each rise time at alpha = 0.05
+
+2.5 Verify Assumptions of the Linear Model
+
+```{r}
+par(mfrow=c(2,2))
+plot(mod1, which=5)
+plot(mod1, which=1)
+plot(mod1,which=2)
+plot(residuals(mod1) ~ loaf, main = "Residuals vs. Exp. Unit", font.main=1, data=bread)
+abline(h=0, lty=2)
+```
+
+###2.5 Box Cox Power Transofmration for heterogeneous variance of residuals
+
+```{r}
+library(MASS)
+bc <- boxcox(mod1)
+lambda <- bc$x[which.max(bc$y)]
+lambda
+```
+The value of lambda that maximizes the log likelihood (or minimizes the error sum of squares is the most optimal in the box-cox plot. 
+
+Let's transofmrm the response variable with this lambda
+
+```{r}
+tbread <- transform(bread, theight= height^(lambda))
+mod2 <- aov(theight ~ time, data=tbread)
+summary(mod2)
+```
+
+Next, let's take a look again at the graphs to verify the assumptions of hte anaylsis. 
+
+```{r}
+par(mfrow=c(2,2))
+plot(mod2, which=5)
+plot(mod2, which=1)
+plot(mod2,which=2)
+plot(residuals(mod2) ~ loaf, main = "Residuals vs. Exp. Unit", font.main=1, data=bread)
+abline(h=0, lty=2)
+```
+
+Variability of the rsiduals are about the same with the transformation. 
+
+###2.6.3 Alternatives to LS Analysis
+
+We can use weighted least squares where the weights are the reciprocal of the standard deviations
+
+```{r}
+with(bread, 
+     {std <- tapply(height,time,sd)
+     weights <- rep(1/std, each=4)
+     mod3 <- lm(height ~ time, weights=weights, data=bread)
+     anova(mod3)})  # calculates the sd of the response at each level of time
+```
+
+THe F-Test from the weights least squares is more sensitive than the unweighted least squares. 
+
+We can also use a generalized linear model when the error distribution is not normal. THe `polr` function is used to fit the full and reduced model. By default, it uses the logistic link function and the multinomial distribution. 
+
+Full model includes the treatment factor while the reduced model only includes the intercept. 
+
+ANOVA displays the likelihood ratio test of the significance of the treatment factor. 
+
+```{r}
+library("daewr")
+library("MASS")
+modf <- polr(score ~ method, weight= count, data=teach)
+modr <- polr(score ~ 1, weight=count, data=teach)
+anova(modf, modr)
+```
+
+P-value is small indicating there's a significant difference between the teaching methods. 
+
+### 2.7 Determining the number of replicates
