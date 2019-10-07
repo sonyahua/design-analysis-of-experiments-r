@@ -156,3 +156,25 @@ anova(modf, modr)
 P-value is small indicating there's a significant difference between the teaching methods. 
 
 ### 2.7 Determining the number of replicates
+
+We need to first determine what is the effect we want to detect with signfiicance that is practically meaningful or important. The the number of replicates can be determined using a power calculation
+
+```{r}
+library(daewr)
+rmin <- 2 # smallest number of replicates considered
+rmax <-6 # largest number of replicates considered
+alpha <- rep(0.05, rmax-rmin+1)  #rep(0.05, 5)
+sigma <- sqrt(2.1)
+nlev <- 3
+nreps <- rmin:rmax
+Delta <- 3
+power <- Fpower1(alpha,nlev,nreps,Delta,sigma)
+power 
+
+# Power chart
+
+```
+
+By using a vector argument for `nreps`, the function produces a corresponding vector of power values. Wee can see that r=5 replicates has a 73% chance of detecting a difference in cell means as large as 3.0 and with r=6, there is a 83% chance. 
+
+

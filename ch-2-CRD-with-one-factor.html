@@ -425,6 +425,25 @@ anova(modf, modr)</code></pre>
 </div>
 <div id="determining-the-number-of-replicates" class="section level3">
 <h3>2.7 Determining the number of replicates</h3>
+<p>We need to first determine what is the effect we want to detect with signfiicance that is practically meaningful or important. The the number of replicates can be determined using a power calculation</p>
+<pre class="r"><code>library(daewr)
+rmin &lt;- 2 # smallest number of replicates considered
+rmax &lt;-6 # largest number of replicates considered
+alpha &lt;- rep(0.05, rmax-rmin+1)  #rep(0.05, 5)
+sigma &lt;- sqrt(2.1)
+nlev &lt;- 3
+nreps &lt;- rmin:rmax
+Delta &lt;- 3
+power &lt;- Fpower1(alpha,nlev,nreps,Delta,sigma)
+power </code></pre>
+<pre><code>##      alpha nlev nreps Delta    sigma     power
+## [1,]  0.05    3     2     3 1.449138 0.1947995
+## [2,]  0.05    3     3     3 1.449138 0.4041857
+## [3,]  0.05    3     4     3 1.449138 0.5903406
+## [4,]  0.05    3     5     3 1.449138 0.7328895
+## [5,]  0.05    3     6     3 1.449138 0.8329923</code></pre>
+<pre class="r"><code># Power chart</code></pre>
+<p>By using a vector argument for <code>nreps</code>, the function produces a corresponding vector of power values. Wee can see that r=5 replicates has a 73% chance of detecting a difference in cell means as large as 3.0 and with r=6, there is a 83% chance.</p>
 </div>
 
 
