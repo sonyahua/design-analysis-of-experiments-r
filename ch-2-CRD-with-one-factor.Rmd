@@ -177,4 +177,94 @@ power
 
 By using a vector argument for `nreps`, the function produces a corresponding vector of power values. Wee can see that r=5 replicates has a 73% chance of detecting a difference in cell means as large as 3.0 and with r=6, there is a 83% chance. 
 
+####2.8.1 Preplanned Comparisons 
 
+To determine which cell means are different, preplanned comparisons are used or contrasts.
+
+```{r}
+library(daewr)
+mod4 <- aov(yield ~ treat, data=sugarbeet)
+con <- matrix(c(1, -1/3, -1/3, -1/3, 0, 1, -1, 0, 0, 0, 1, -1), 4, 3)  # 4x3 matrix
+L <- t(con)
+rownames(L) <- c("-fertilizer effect", "-plowed vs. broadcast", "-January vs. April")
+L
+```
+
+The function below prints the results
+```{r}
+options(digits=3)
+library(gmodels)
+print(fit.contrast(mod4, "treat", L))  
+
+#treat=variable name, L = coefficient (vector or matrix specifying contrasts in general form)
+
+```
+
+1) Artificial fertilizers enhance yield
+2) Broadcast application results in higher yields than plowed application
+3) There is no significant difference in yield between April and January
+
+```{r}
+contrasts(bread$time) <- contr.poly(3)
+contrasts(bread$time)
+```
+
+This shows the linear and quadratic contrasts 
+
+Linear means if we increase the dose level the Y values will increase, and we can select the best level based on the highest dose.
+
+Quadratic means, if we increase the dose level the Y values will be increased until certain dose after that the level of dosage will have a negative effect.
+
+Below calculates the contrasts and displays the results
+
+
+```{r}
+mod3 <-aov(height ~ time, bread)
+summary(lm(mod3))
+```
+
+THere is a significant linear trend for time, but no significant quadratic trend. If there levels for the factor time were created with the ordered command instead of factor command, R automatically creates the X matrix using the orthogonal polynomial contrasts and the summary table above can be created without creating additional contrasts for time. 
+
+2.8.2 Unplanned Comparisons
+
+When doing individual comparisons, we should make an adjustment when there's more than 2 levels. For pairwise comparisons, Tukey's HSD can be used adjusting hte cricital region by using the studentized range statstic instead of t-distribution.
+
+```{r}
+# Before tukey adjustment
+mod4 <- aov(yield~ treat, data=sugarbeet)
+summary(mod4)
+
+#After tukey adjustment
+mod4.tukey <- TukeyHSD(mod4, ordered=T)
+mod4.tukey
+```
+The first column lists the comparisons.
+The 2nd column lists the difference in cell means.
+The next 2 columns are upper and lower bounds at 95% CI on the difference of means. 
+The final column is a p-value for the test of the null hypothesis that the 2 means are equal. 
+
+For example, the last comparison (C vs. D) includes 0 in its confidence interval - which is not significantly different than the yield for treatment. All other pairwise comparisons show a signicant
+
+
+```{r}
+# NK Method
+#install.packages("agricolae")
+library(agricolae)
+#install.packages("mime")
+compare <- SNK.test(mod4, "treat", alpha=0.05)
+print(compare)
+```
+
+####2.8.3 Comparison of All Means to a Control or the Best level
+
+Dunnett developed a method to compare different experimental levels  to a control while controlling the experiment-wise type 1 error rate. When using the glht function, by default the first level of the treatment factor is the control. First, look at the observed means to decide which treatment level is the best. 
+
+```{r}
+summary(sugarbeet)
+
+library("multcomp")
+sugar.dun<- glht(mod4, linfct=mcp(treat="Dunnett"), alternative="greater")
+summary(sugar.dun)
+```
+
+When comparing all treatment levels to a control, the desired direction of the difference is often known. Therefore, a one-tailed test, rather than a 2-tailed test, may be required. 

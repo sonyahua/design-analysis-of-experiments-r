@@ -444,6 +444,174 @@ power </code></pre>
 ## [5,]  0.05    3     6     3 1.449138 0.8329923</code></pre>
 <pre class="r"><code># Power chart</code></pre>
 <p>By using a vector argument for <code>nreps</code>, the function produces a corresponding vector of power values. Wee can see that r=5 replicates has a 73% chance of detecting a difference in cell means as large as 3.0 and with r=6, there is a 83% chance.</p>
+<div id="preplanned-comparisons" class="section level4">
+<h4>2.8.1 Preplanned Comparisons</h4>
+<p>To determine which cell means are different, preplanned comparisons are used or contrasts.</p>
+<pre class="r"><code>library(daewr)
+mod4 &lt;- aov(yield ~ treat, data=sugarbeet)
+con &lt;- matrix(c(1, -1/3, -1/3, -1/3, 0, 1, -1, 0, 0, 0, 1, -1), 4, 3)  # 4x3 matrix
+L &lt;- t(con)
+rownames(L) &lt;- c(&quot;-fertilizer effect&quot;, &quot;-plowed vs. broadcast&quot;, &quot;-January vs. April&quot;)
+L</code></pre>
+<pre><code>##                       [,1]       [,2]       [,3]       [,4]
+## -fertilizer effect       1 -0.3333333 -0.3333333 -0.3333333
+## -plowed vs. broadcast    0  1.0000000 -1.0000000  0.0000000
+## -January vs. April       0  0.0000000  1.0000000 -1.0000000</code></pre>
+<p>The function below prints the results</p>
+<pre class="r"><code>options(digits=3)
+library(gmodels)
+print(fit.contrast(mod4, &quot;treat&quot;, L))  </code></pre>
+<pre><code>##                            Estimate Std. Error t value Pr(&gt;|t|)
+## treat-fertilizer effect        -8.8      0.825 -10.664 4.19e-08
+## treat-plowed vs. broadcast     -3.8      0.975  -3.897 1.61e-03
+## treat-January vs. April         0.1      0.919   0.109 9.15e-01
+## attr(,&quot;class&quot;)
+## [1] &quot;fit_contrast&quot;</code></pre>
+<pre class="r"><code>#treat=variable name, L = coefficient (vector or matrix specifying contrasts in general form)</code></pre>
+<ol style="list-style-type: decimal">
+<li>Artificial fertilizers enhance yield</li>
+<li>Broadcast application results in higher yields than plowed application</li>
+<li>There is no significant difference in yield between April and January</li>
+</ol>
+<pre class="r"><code>contrasts(bread$time) &lt;- contr.poly(3)
+contrasts(bread$time)</code></pre>
+<pre><code>##           .L     .Q
+## 35 -7.07e-01  0.408
+## 40 -7.85e-17 -0.816
+## 45  7.07e-01  0.408</code></pre>
+<p>This shows the linear and quadratic contrasts</p>
+<p>Linear means if we increase the dose level the Y values will increase, and we can select the best level based on the highest dose.</p>
+<p>Quadratic means, if we increase the dose level the Y values will be increased until certain dose after that the level of dosage will have a negative effect.</p>
+<p>Below calculates the contrasts and displays the results</p>
+<pre class="r"><code>mod3 &lt;-aov(height ~ time, bread)
+summary(lm(mod3))</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = mod3)
+## 
+## Residuals:
+##    Min     1Q Median     3Q    Max 
+##  -1.81  -1.14   0.00   1.27   2.25 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)    7.333      0.442   16.59  4.7e-08 ***
+## time.L         2.033      0.765    2.66    0.026 *  
+## time.Q        -1.123      0.765   -1.47    0.177    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 1.53 on 9 degrees of freedom
+## Multiple R-squared:  0.506,  Adjusted R-squared:  0.396 
+## F-statistic:  4.6 on 2 and 9 DF,  p-value: 0.042</code></pre>
+<p>THere is a significant linear trend for time, but no significant quadratic trend. If there levels for the factor time were created with the ordered command instead of factor command, R automatically creates the X matrix using the orthogonal polynomial contrasts and the summary table above can be created without creating additional contrasts for time.</p>
+<p>2.8.2 Unplanned Comparisons</p>
+<p>When doing individual comparisons, we should make an adjustment when there’s more than 2 levels. For pairwise comparisons, Tukey’s HSD can be used adjusting hte cricital region by using the studentized range statstic instead of t-distribution.</p>
+<pre class="r"><code># Before tukey adjustment
+mod4 &lt;- aov(yield~ treat, data=sugarbeet)
+summary(mod4)</code></pre>
+<pre><code>##             Df Sum Sq Mean Sq F value  Pr(&gt;F)    
+## treat        3  291.0    97.0    45.9 1.7e-07 ***
+## Residuals   14   29.6     2.1                    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</code></pre>
+<pre class="r"><code>#After tukey adjustment
+mod4.tukey &lt;- TukeyHSD(mod4, ordered=T)
+mod4.tukey</code></pre>
+<pre><code>##   Tukey multiple comparisons of means
+##     95% family-wise confidence level
+##     factor levels have been ordered
+## 
+## Fit: aov(formula = yield ~ treat, data = sugarbeet)
+## 
+## $treat
+##     diff    lwr   upr p adj
+## B-A  6.3  3.312  9.29 0.000
+## D-A 10.0  7.166 12.83 0.000
+## C-A 10.1  7.266 12.93 0.000
+## D-B  3.7  0.866  6.53 0.009
+## C-B  3.8  0.966  6.63 0.008
+## C-D  0.1 -2.572  2.77 1.000</code></pre>
+<p>The first column lists the comparisons. The 2nd column lists the difference in cell means. The next 2 columns are upper and lower bounds at 95% CI on the difference of means. The final column is a p-value for the test of the null hypothesis that the 2 means are equal.</p>
+<p>For example, the last comparison (C vs. D) includes 0 in its confidence interval - which is not significantly different than the yield for treatment. All other pairwise comparisons show a signicant</p>
+<pre class="r"><code># NK Method
+#install.packages(&quot;agricolae&quot;)
+library(agricolae)</code></pre>
+<pre><code>## Warning: package 'agricolae' was built under R version 3.6.1</code></pre>
+<pre class="r"><code>#install.packages(&quot;mime&quot;)
+compare &lt;- SNK.test(mod4, &quot;treat&quot;, alpha=0.05)
+print(compare)</code></pre>
+<pre><code>## $statistics
+##   MSerror Df Mean   CV
+##      2.11 14 45.7 3.18
+## 
+## $parameters
+##   test name.t ntr alpha
+##    SNK  treat   4  0.05
+## 
+## $snk
+## NULL
+## 
+## $means
+##   yield  std r  Min  Max  Q25  Q50  Q75
+## A  38.7 1.65 4 36.9 40.1 37.5 38.9 40.1
+## B  45.0 1.33 4 43.7 46.2 43.9 45.0 46.1
+## C  48.8 1.10 5 47.7 50.6 48.2 48.6 48.9
+## D  48.7 1.68 5 47.2 51.3 47.3 48.5 49.2
+## 
+## $comparison
+## NULL
+## 
+## $groups
+##   yield groups
+## C  48.8      a
+## D  48.7      a
+## B  45.0      b
+## A  38.7      c
+## 
+## attr(,&quot;class&quot;)
+## [1] &quot;group&quot;</code></pre>
+</div>
+<div id="comparison-of-all-means-to-a-control-or-the-best-level" class="section level4">
+<h4>2.8.3 Comparison of All Means to a Control or the Best level</h4>
+<p>Dunnett developed a method to compare different experimental levels to a control while controlling the experiment-wise type 1 error rate. When using the glht function, by default the first level of the treatment factor is the control. First, look at the observed means to decide which treatment level is the best.</p>
+<pre class="r"><code>summary(sugarbeet)</code></pre>
+<pre><code>##  treat     yield     
+##  A:4   Min.   :36.9  
+##  B:4   1st Qu.:43.8  
+##  C:5   Median :47.2  
+##  D:5   Mean   :45.7  
+##        3rd Qu.:48.6  
+##        Max.   :51.3</code></pre>
+<pre class="r"><code>library(&quot;multcomp&quot;)</code></pre>
+<pre><code>## Loading required package: mvtnorm</code></pre>
+<pre><code>## Loading required package: survival</code></pre>
+<pre><code>## Loading required package: TH.data</code></pre>
+<pre><code>## 
+## Attaching package: 'TH.data'</code></pre>
+<pre><code>## The following object is masked from 'package:MASS':
+## 
+##     geyser</code></pre>
+<pre class="r"><code>sugar.dun&lt;- glht(mod4, linfct=mcp(treat=&quot;Dunnett&quot;), alternative=&quot;greater&quot;)
+summary(sugar.dun)</code></pre>
+<pre><code>## 
+##   Simultaneous Tests for General Linear Hypotheses
+## 
+## Multiple Comparisons of Means: Dunnett Contrasts
+## 
+## 
+## Fit: aov(formula = yield ~ treat, data = sugarbeet)
+## 
+## Linear Hypotheses:
+##            Estimate Std. Error t value  Pr(&gt;t)    
+## B - A &lt;= 0    6.300      1.028    6.13 1.8e-05 ***
+## C - A &lt;= 0   10.100      0.975   10.36 &lt; 1e-05 ***
+## D - A &lt;= 0   10.000      0.975   10.25 &lt; 1e-05 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## (Adjusted p values reported -- single-step method)</code></pre>
+<p>When comparing all treatment levels to a control, the desired direction of the difference is often known. Therefore, a one-tailed test, rather than a 2-tailed test, may be required.</p>
+</div>
 </div>
 
 
